@@ -1,0 +1,31 @@
+[Unit]
+Description=CPU Control D-Bus helper
+After=dbus.service polkit.service
+
+[Service]
+Type=dbus
+BusName=org.local.CpuControl1
+ExecStart=/usr/bin/python3 -I -B /etc/cpu-control/cpu_control.py
+Restart=on-failure
+RestartSec=3
+RuntimeDirectory=cpu-control
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictAddressFamilies=AF_UNIX
+CapabilityBoundingSet=
+ReadWritePaths=/sys/devices/system/cpu /run/cpu-control
+
+[Install]
+WantedBy=multi-user.target

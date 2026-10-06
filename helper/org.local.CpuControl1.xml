@@ -1,0 +1,13 @@
+<node>
+  <interface name="org.local.CpuControl1">
+    <method name="GetState"><arg name="state" type="s" direction="out"/></method>
+    <method name="SetConfiguration">
+      <arg name="physical_cores" type="u" direction="in"/>
+      <arg name="smt" type="b" direction="in"/>
+      <arg name="state" type="s" direction="out"/>
+    </method>
+    <method name="RestoreAll"><arg name="state" type="s" direction="out"/></method>
+    <method name="Discover"><arg name="state" type="s" direction="out"/></method>
+    <signal name="StateChanged"><arg name="state" type="s"/></signal>
+  </interface>
+</node>

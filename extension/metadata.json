@@ -1,0 +1,7 @@
+{
+  "uuid": "cpu-control@local",
+  "name": "CPU Control",
+  "description": "Select physical CPU cores and SMT threads from the top bar using a polkit-protected system service.",
+  "shell-version": ["50"],
+  "version": 1
+}
