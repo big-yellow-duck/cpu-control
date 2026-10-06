@@ -1,6 +1,7 @@
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
+import GObject from 'gi://GObject';
 import St from 'gi://St';
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -10,6 +11,16 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 const BUS = 'org.local.CpuControl1';
 const PATH = '/org/local/CpuControl1';
+
+const SmtSwitchMenuItem = GObject.registerClass(
+class CpuControlSmtSwitchMenuItem extends PopupMenu.PopupSwitchMenuItem {
+    activate(_event) {
+        // The inherited activation signal closes the menu. Toggle in place
+        // for clicks, Enter and Space so the result stays visible.
+        if (this.mapped && this.sensitive)
+            this.toggle();
+    }
+});
 
 export default class CpuControlExtension extends Extension {
     enable() {
@@ -99,7 +110,7 @@ export default class CpuControlExtension extends Extension {
             }
             this._all = this._button.menu.addAction('All cores', () => this._change('RestoreAll'));
             this._button.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-            this._smt = new PopupMenu.PopupSwitchMenuItem('SMT', false);
+            this._smt = new SmtSwitchMenuItem('SMT', false);
             this._smt.connect('toggled', (_item, enabled) => {
                 if (!this._busy && !this._updating && this._state.ready)
                     this._change('SetConfiguration', new GLib.Variant('(ub)', [this._state.physical_cores, enabled]));

@@ -8,6 +8,8 @@ The top bar shows `CPU 8`, for example. Its menu shows the active/total physical
 
 Selecting 8 with SMT ON enables every sibling thread on 8 physical cores. SMT OFF leaves one thread on each of those 8 cores. **All cores restores every present logical CPU and enables SMT**; to use all physical cores with SMT OFF, choose All cores, then switch SMT off.
 
+The SMT switch keeps the menu open when clicked or activated with Enter or Space. Controls briefly disable while applying the change, then show the updated thread count, preserving the selected physical-core count.
+
 The menu observes helper signals every two seconds and refreshes on opening and every five seconds. External CPU changes, partial SMT configurations, and helper restarts are reflected automatically. Disabling the extension leaves the current CPU configuration in place.
 
 ## Installation
@@ -36,7 +38,7 @@ Installed files:
 
 Installation deliberately discovers topology by temporarily enabling all CPUs and restoring the original online mask and kernel SMT control. It never persists a reduced core count. The enabled service starts at boot but only **reads** CPU state until a configuration request arrives. If complete topology is available at startup, it caches it without hotplug. If CPUs were already offlined and topology is missing, the menu offers **Detect CPU topology…** or **All cores**.
 
-Run the installer again to update files. System files are copies owned by root; the service does not execute code from this working directory or your home directory. Remove it with:
+Run the installer again to update all files. For extension-only updates, use `./scripts/install-extension.sh`; this updates your user files without changing the helper or CPU configuration. Log out and back in to load updated JavaScript in GNOME Shell. System files are copies owned by root; the service does not execute code from this working directory or your home directory. Remove it with:
 
 ```sh
 ./scripts/uninstall.sh

@@ -24,25 +24,46 @@ export async function run() {
     await until(() => Main.extensionManager.lookup(uuid)?.stateObj?._state?.ready,
         'Extension did not load with valid topology');
     const extension = Main.extensionManager.lookup(uuid).stateObj;
+    Main.overview.hide();
+    await until(() => !Main.overview.visible && !Main.layoutManager._startingUp,
+        'Shell startup did not finish');
     assert(extension._enabled, 'Extension must be enabled');
     assert(Main.panel.statusArea[uuid] === extension._button, 'Top bar button is missing');
     assert(extension._smt.sensitive, 'SMT switch should be available');
     extension._button.menu.open();
     await Scripting.sleep(300);
+    assert(extension._smt.mapped, 'SMT switch is not mapped in the open menu');
     const count = extension._state.choices.find(value => value >= 4) ?? extension._state.choices[0];
     const item = extension._counts.find(([value]) => value === count)[1];
     item.activate(null);
     await until(() => !extension._busy && extension._state.physical_cores === count,
         'Radio selector did not apply the physical core count');
-    const smt = extension._state.smt_enabled;
-    extension._smt.toggle();
-    await until(() => !extension._busy && extension._state.smt_enabled === !smt,
-        'SMT toggle did not apply');
-    assert(extension._state.physical_cores === count, 'SMT toggle changed physical core count');
-    extension._smt.toggle();
-    await until(() => !extension._busy && extension._state.smt_enabled === smt,
-        'Second SMT toggle did not apply');
-    assert(extension._state.physical_cores === count, 'Second SMT toggle changed core count');
+    extension._button.menu.open();
+    await Scripting.sleep(300);
+    let closes = 0;
+    const openSignal = extension._button.menu.connect('open-state-changed', (_menu, open) => {
+        if (!open)
+            closes++;
+    });
+    try {
+        for (let attempt = 0; attempt < 2; attempt++) {
+            const smt = extension._state.smt_enabled;
+            // Use the activation callback shared by clicks and keyboard input,
+            // rather than toggle(), which bypasses GNOME's menu-close behavior.
+            extension._smt.activate(null);
+            assert(extension._button.menu.isOpen && closes === 0,
+                'SMT activation closed the menu while applying');
+            await until(() => !extension._busy && extension._state.smt_enabled === !smt,
+                'SMT activation did not apply');
+            assert(extension._state.physical_cores === count, 'SMT changed physical core count');
+            assert(extension._button.menu.isOpen && closes === 0,
+                'SMT activation closed the menu after applying');
+            assert(extension._smt.sensitive, 'SMT switch remained disabled');
+        }
+        print('PASS: SMT activation in both directions keeps the menu open');
+    } finally {
+        extension._button.menu.disconnect(openSignal);
+    }
     extension._all.activate(null);
     await until(() => !extension._busy && extension._state.online_cpus.length === extension._state.total_threads,
         'All cores did not restore every logical CPU');
