@@ -1,6 +1,6 @@
 # CPU Control
 
-A GNOME Shell 50 top-bar menu for selecting **physical CPU cores** and turning **SMT ON/OFF**, backed by a small, polkit-protected system D-Bus service. Built and tested on Bazzite GNOME. No package layering or changes to the immutable `/usr` tree.
+A GNOME Shell 50 top-bar menu for selecting **physical CPU cores** and turning **SMT ON/OFF**, backed by a small, polkit-protected system D-Bus service. For Linux desktops running GNOME Shell 50. Tested on Bazzite GNOME; other distributions must supply the dependencies below. The installer does not modify `/usr`.
 
 ## Menu
 
@@ -22,17 +22,17 @@ Run from your normal GNOME desktop account:
 
 An administrator authentication dialog installs the system files. The script then copies and enables the local extension. If GNOME has not discovered a new extension yet, log out and back in; the script enables it for that session. GNOME 50 uses Wayland and cannot restart Shell in place.
 
-Existing Bazzite components supply Python 3, PyGObject, D-Bus, systemd and polkit. No `rpm-ostree` layering is needed. This installer requires GNOME Shell 50 and a polkit version supporting `/etc/polkit-1/actions` (verified on Bazzite's polkit 127).
+Dependencies: Python 3 with PyGObject (Gio and GLib), D-Bus, systemd, polkit with `pkexec`, and the GNOME extension tools. Bazzite supplies these components without package layering. This installer requires GNOME Shell 50 and a polkit version supporting `/etc/polkit-1/actions` (verified on Bazzite's polkit 127).
 
 Installed files:
 
 | Location | Purpose |
 | --- | --- |
-| `~/.local/share/gnome-shell/extensions/cpu-control@local/` | Extension JavaScript, metadata and CSS |
+| `~/.local/share/gnome-shell/extensions/cpu-control@big-yellow-duck.github.io/` | Extension JavaScript, metadata and CSS |
 | `/etc/cpu-control/` | Root-owned Python helper and D-Bus interface |
 | `/etc/systemd/system/cpu-control.service` | Root service and sandbox settings |
-| `/etc/dbus-1/system.d/org.local.CpuControl1.conf` | System-bus access policy |
-| `/etc/polkit-1/actions/org.local.cpu-control.policy` | Single configuration action |
+| `/etc/dbus-1/system.d/io.github.big_yellow_duck.CpuControl1.conf` | System-bus access policy |
+| `/etc/polkit-1/actions/io.github.big_yellow_duck.cpu-control.policy` | Single configuration action |
 | `/etc/polkit-1/rules.d/49-cpu-control.rules` | Allow only the installing user in an active local session |
 | `/run/cpu-control/topology.json` | Root-owned topology cache, removed on reboot |
 
@@ -58,7 +58,7 @@ Operations are serialized in the helper. External hotplug is detected at the end
 
 ## Security and D-Bus
 
-The extension sends only typed D-Bus requests. It runs no `sudo`/`pkexec`, executes no privileged commands, and writes no sysfs files. The helper exposes four methods on `org.local.CpuControl1`, object `/org/local/CpuControl1`:
+The extension sends only typed D-Bus requests. It runs no `sudo`/`pkexec`, executes no privileged commands, and writes no sysfs files. The helper exposes four methods on `io.github.big_yellow_duck.CpuControl1`, object `/io/github/big_yellow_duck/CpuControl1`:
 
 | Method | Arguments | Behavior |
 | --- | --- | --- |
@@ -67,7 +67,7 @@ The extension sends only typed D-Bus requests. It runs no `sudo`/`pkexec`, execu
 | `RestoreAll` | none | Enable every present CPU, including SMT siblings |
 | `Discover` | none | Probe complete topology and restore the starting CPU configuration |
 
-All changing methods check `org.local.cpu-control.configure` through polkit using the actual D-Bus sender's unique bus name. No caller-supplied paths, commands or executables are accepted. The local rule allows the installing user in an active local session; other active users require administrative authentication, and inactive/remote users are denied by default. The permission applies to applications in that user's session, not exclusively the extension.
+All changing methods check `io.github.big_yellow_duck.cpu-control.configure` through polkit using the actual D-Bus sender's unique bus name. No caller-supplied paths, commands or executables are accepted. The local rule allows the installing user in an active local session; other active users require administrative authentication, and inactive/remote users are denied by default. The permission applies to applications in that user's session, not exclusively the extension.
 
 The service has a read-only filesystem with write exceptions for the CPU sysfs subtree and its runtime directory, no capabilities, no home access, no new privileges, and only UNIX-domain networking. Source files remain in this project for review and reproducible installation.
 
@@ -77,7 +77,7 @@ The service has a read-only filesystem with write exceptions for the CPU sysfs s
 ./scripts/state.sh
 systemctl status cpu-control.service
 journalctl -u cpu-control.service -b
-gnome-extensions info cpu-control@local
+gnome-extensions info cpu-control@big-yellow-duck.github.io
 python3 -m unittest discover -s tests -v
 ```
 
@@ -89,16 +89,34 @@ For an integration test on real hardware, after installation:
 
 This deliberately changes CPU availability. It makes D-Bus requests as your desktop user and runs the extension in a separate headless GNOME Shell using GNOME's own test tool. A separately authenticated root guard snapshots the exact online CPU mask and kernel SMT control and restores them on completion, failure, interruption, or test-process exit. Run it from an active local GNOME session. It does not restart your main desktop.
 
-Verified on the development machine: 4, 6, 8 and 12 physical cores with SMT ON/OFF; All cores restoring 32 logical threads; invalid requests leaving CPUs unchanged; native radio/switch callbacks; menu recovery after errors; and extension disable/re-enable. The fake-sysfs tests additionally cover shuffled CPU numbering, separate sockets, rejected offlining, external state changes, topology-cache reuse, and changes to the present CPU set.
+Verified locally on GNOME Shell 50.5 with 8 physical cores / 16 threads: 4, 6 and 8 physical cores with SMT ON/OFF; All cores; invalid requests leaving CPUs unchanged; native radio/switch callbacks; menu recovery after errors; and extension disable/re-enable. The integration guard restored the initial 8-online-thread, SMT-off state. The fake-sysfs tests additionally cover shuffled CPU numbering, separate sockets, rejected offlining, external state changes, topology-cache reuse, and changes to the present CPU set.
 
 Command-line recovery:
 
 ```sh
-busctl call org.local.CpuControl1 /org/local/CpuControl1 org.local.CpuControl1 RestoreAll
+busctl call io.github.big_yellow_duck.CpuControl1 /io/github/big_yellow_duck/CpuControl1 io.github.big_yellow_duck.CpuControl1 RestoreAll
 ```
 
 If the helper is unavailable, the kernel hotplug controls remain usable through your usual administrative tools. Reboot also returns CPU availability to the system's existing boot defaults.
 
-The development machine was inspected as GNOME Shell 50.5, AMD Ryzen AI Max+ 395, 16 physical cores / 32 threads. Its sibling pairs are `(0,16)` through `(15,31)`; these values are discovered, not hardcoded. It began with CPUs `0–7` online and kernel SMT control `off`.
-
 Implementation references: [GNOME 50 extension guide](https://gjs.guide/extensions/upgrading/gnome-shell-50.html), [native popup menus](https://gjs.guide/extensions/topics/popup-menu.html), [kernel CPU topology](https://www.kernel.org/doc/html/latest/admin-guide/cputopology.html), and [polkit architecture](https://polkit.pages.freedesktop.org/polkit/polkit.8.html).
+
+## Sharing the extension
+
+Build the GNOME extension archive with:
+
+```sh
+./scripts/package-extension.sh
+```
+
+The ZIP is written to `artifacts/cpu-control@big-yellow-duck.github.io.shell-extension.zip`. It contains only the extension runtime files and the Apache 2.0 license. Install the system helper first with `./scripts/install.sh`; installing the ZIP alone does not install the privileged helper. Uploading to extensions.gnome.org requires a separate review; packaging does not establish approval or compatibility beyond GNOME 50.
+
+The extension UUID uses the project owner's GitHub namespace. The D-Bus interface and policy filenames use `io.github.big_yellow_duck`; underscores replace the hyphens in the GitHub username because D-Bus interface names do not permit hyphens.
+
+For an existing installation using `cpu-control@local` / `org.local.CpuControl1`, run that version's `./scripts/uninstall.sh` before installing this version. This restores all CPUs and removes the old policies.
+
+The optional `install-power-profiles.sh` and `uninstall-power-profiles.sh` scripts are Bazzite-specific utilities, independent of CPU Control installation. Their Bazzite systemd drop-in name identifies the service they modify and is intentionally retained.
+
+## License
+
+CPU Control is licensed under the [Apache License 2.0](LICENSE) (`Apache-2.0`).

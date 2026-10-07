@@ -4,7 +4,7 @@ After=dbus.service polkit.service
 
 [Service]
 Type=dbus
-BusName=org.local.CpuControl1
+BusName=io.github.big_yellow_duck.CpuControl1
 ExecStart=/usr/bin/python3 -I -B /etc/cpu-control/cpu_control.py
 Restart=on-failure
 RestartSec=3

@@ -1,6 +1,6 @@
 // Only the installing user, in an active local session, may use this action.
 polkit.addRule(function(action, subject) {
-    if (action.id === 'org.local.cpu-control.configure' &&
+    if (action.id === 'io.github.big_yellow_duck.cpu-control.configure' &&
         subject.user === '@USER@' && subject.local && subject.active)
         return polkit.Result.YES;
 });

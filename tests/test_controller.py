@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: Apache-2.0
 """Exercise topology, ordering, recovery and external changes with fake sysfs."""
 import importlib.util
 import tempfile

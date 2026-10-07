@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
 """Snapshot CPUs as root; restore on pipe closure, request, signal or timeout."""
 import importlib.util
 import os

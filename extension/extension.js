@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
@@ -9,8 +10,8 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
-const BUS = 'org.local.CpuControl1';
-const PATH = '/org/local/CpuControl1';
+const BUS = 'io.github.big_yellow_duck.CpuControl1';
+const PATH = '/io/github/big_yellow_duck/CpuControl1';
 
 const SmtSwitchMenuItem = GObject.registerClass(
 class CpuControlSmtSwitchMenuItem extends PopupMenu.PopupSwitchMenuItem {

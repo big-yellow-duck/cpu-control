@@ -2,7 +2,7 @@
 <!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN" "http://www.freedesktop.org/software/polkit/policyconfig-1.dtd">
 <policyconfig>
   <vendor>CPU Control</vendor>
-  <action id="org.local.cpu-control.configure">
+  <action id="io.github.big_yellow_duck.cpu-control.configure">
     <description>Change physical CPU core and SMT availability</description>
     <message>Administrator authentication is required to change CPU availability</message>
     <defaults>

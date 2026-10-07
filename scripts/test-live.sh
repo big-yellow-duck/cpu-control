@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 # Temporarily changes real CPU availability; the root guard restores it afterward.
 set -euo pipefail
 project=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)

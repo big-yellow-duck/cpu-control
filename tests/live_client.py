@@ -1,12 +1,13 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
 """Real system D-Bus requests as the unprivileged desktop user."""
 import json
 import os
 from pathlib import Path
 from gi.repository import Gio, GLib
 
-BUS = "org.local.CpuControl1"
-PATH = "/org/local/CpuControl1"
+BUS = "io.github.big_yellow_duck.CpuControl1"
+PATH = "/io/github/big_yellow_duck/CpuControl1"
 ROOT = Path("/sys/devices/system/cpu")
 connection = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
 

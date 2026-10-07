@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
 """Restricted CPU hotplug controller. No subprocesses or caller-supplied paths."""
 from __future__ import annotations
 
@@ -8,9 +9,9 @@ import signal
 from pathlib import Path
 
 
-BUS_NAME = "org.local.CpuControl1"
-OBJECT_PATH = "/org/local/CpuControl1"
-ACTION = "org.local.cpu-control.configure"
+BUS_NAME = "io.github.big_yellow_duck.CpuControl1"
+OBJECT_PATH = "/io/github/big_yellow_duck/CpuControl1"
+ACTION = "io.github.big_yellow_duck.cpu-control.configure"
 
 
 def cpu_list(value: str) -> set[int]:
@@ -244,7 +245,7 @@ def serve():
 
     controller = Controller(cache=Path("/run/cpu-control/topology.json"))
     connection = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
-    xml = Path(__file__).with_name("org.local.CpuControl1.xml").read_text()
+    xml = Path(__file__).with_name("io.github.big_yellow_duck.CpuControl1.xml").read_text()
     interface = Gio.DBusNodeInfo.new_for_xml(xml).interfaces[0]
     loop = GLib.MainLoop()
     busy = False

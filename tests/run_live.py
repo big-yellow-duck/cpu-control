@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
 """Run real D-Bus/Shell tests in the desktop session, with a separate root guard."""
 import os
 import signal
@@ -36,7 +37,7 @@ try:
         raise RuntimeError("Recovery guard did not start")
     run(["/usr/bin/python3", "-B", str(project / "tests/live_client.py")])
     run(["/usr/bin/dbus-run-session", "--", "/usr/bin/gnome-shell-test-tool", "--headless",
-         "--disable-animations", "--extension", str(project / "artifacts/cpu-control@local.shell-extension.zip"),
+         "--disable-animations", "--extension", str(project / "artifacts/cpu-control@big-yellow-duck.github.io.shell-extension.zip"),
          str(project / "tests/shell-smoke.js")])
 finally:
     output, _ = guard.communicate("restore\n", timeout=15)

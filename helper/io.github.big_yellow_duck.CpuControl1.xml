@@ -1,5 +1,5 @@
 <node>
-  <interface name="org.local.CpuControl1">
+  <interface name="io.github.big_yellow_duck.CpuControl1">
     <method name="GetState"><arg name="state" type="s" direction="out"/></method>
     <method name="SetConfiguration">
       <arg name="physical_cores" type="u" direction="in"/>

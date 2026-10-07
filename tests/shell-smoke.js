@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Run by GNOME's own test tool in a separate headless Shell, under live_guard.py.
 import GLib from 'gi://GLib';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -20,7 +21,7 @@ async function until(predicate, message) {
 }
 
 export async function run() {
-    const uuid = 'cpu-control@local';
+    const uuid = 'cpu-control@big-yellow-duck.github.io';
     await until(() => Main.extensionManager.lookup(uuid)?.stateObj?._state?.ready,
         'Extension did not load with valid topology');
     const extension = Main.extensionManager.lookup(uuid).stateObj;

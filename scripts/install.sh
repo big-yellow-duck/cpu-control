@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: Apache-2.0
 set -euo pipefail
 project=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 if (( EUID == 0 )); then
@@ -10,7 +11,7 @@ if [[ $shell_major != 50 ]]; then
     echo "This build is tested for GNOME Shell 50; detected $shell_major." >&2
     exit 1
 fi
-/usr/bin/python3 -c 'from gi.repository import Gio, GLib' # already supplied by Bazzite
+/usr/bin/python3 -c 'from gi.repository import Gio, GLib' # verify the system Python has PyGObject
 echo 'System installation: root-owned /etc/cpu-control helper, systemd unit,'
 echo '/etc/dbus-1/system.d policy, /etc/polkit-1 action and local-user rule.'
 echo 'Topology discovery briefly enables all CPUs, then restores their starting state.'

@@ -1,7 +1,9 @@
 {
-  "uuid": "cpu-control@local",
+  "uuid": "cpu-control@big-yellow-duck.github.io",
   "name": "CPU Control",
-  "description": "Select physical CPU cores and SMT threads from the top bar using a polkit-protected system service.",
-  "shell-version": ["50"],
-  "version": 2
+  "description": "Select physical CPU cores and SMT threads from the top bar using a polkit-protected system service. Requires the CPU Control helper installed separately; see the project website.",
+  "shell-version": [
+    "50"
+  ],
+  "url": "https://github.com/big-yellow-duck/cpu-control"
 }

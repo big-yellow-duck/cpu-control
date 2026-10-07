@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# SPDX-License-Identifier: Apache-2.0
 """Reversible opt-in to the installed Fedora GNOME power-profile backend."""
 import json
 import os
