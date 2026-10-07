@@ -11,6 +11,7 @@ if [[ $shell_major != 50 ]]; then
     echo "This build is tested for GNOME Shell 50; detected $shell_major." >&2
     exit 1
 fi
+npm --prefix "$project" run build # fail before installing privileged files
 /usr/bin/python3 -c 'from gi.repository import Gio, GLib' # verify the system Python has PyGObject
 echo 'System installation: root-owned /etc/cpu-control helper, systemd unit,'
 echo '/etc/dbus-1/system.d policy, /etc/polkit-1 action and local-user rule.'

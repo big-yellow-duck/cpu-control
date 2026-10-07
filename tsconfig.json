@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023"],
+    "strict": true,
+    "noEmitOnError": true,
+    "skipLibCheck": true,
+    "useDefineForClassFields": false,
+    "rootDir": "extension",
+    "outDir": "dist"
+  },
+  "include": ["extension/**/*.ts"]
+}

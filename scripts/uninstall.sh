@@ -17,6 +17,6 @@ for key in ('enabled-extensions', 'disabled-extensions'):
 Gio.Settings.sync()
 PY
 destination="${XDG_DATA_HOME:-$HOME/.local/share}/gnome-shell/extensions/cpu-control@big-yellow-duck.github.io"
-rm -f -- "$destination/extension.js" "$destination/metadata.json" "$destination/stylesheet.css" "$destination/LICENSE"
+rm -f -- "$destination/extension.js" "$destination/cpuState.js" "$destination/metadata.json" "$destination/stylesheet.css" "$destination/LICENSE"
 rmdir -- "$destination" 2>/dev/null || true
 echo 'CPU Control removed. Project sources retained.'

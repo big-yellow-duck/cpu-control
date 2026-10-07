@@ -1,0 +1,16 @@
+{
+  "name": "cpu-control",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "build": "tsc && node scripts/build-extension.js",
+    "test": "npm run build && node --test tests/cpu-state.test.js"
+  },
+  "devDependencies": {
+    "@girs/gjs": "5.5.0",
+    "@girs/gnome-shell": "50.0.4",
+    "typescript": "5.9.3"
+  }
+}

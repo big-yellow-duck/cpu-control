@@ -14,9 +14,10 @@ The menu observes helper signals every two seconds and refreshes on opening and 
 
 ## Installation
 
-Run from your normal GNOME desktop account:
+Source installation requires Node.js 22 or newer and npm to compile the TypeScript extension. Run from your normal GNOME desktop account:
 
 ```sh
+npm ci
 ./scripts/install.sh
 ```
 
@@ -103,13 +104,14 @@ Implementation references: [GNOME 50 extension guide](https://gjs.guide/extensio
 
 ## Sharing the extension
 
-Build the GNOME extension archive with:
+Build the GNOME extension archive from TypeScript with:
 
 ```sh
+npm ci
 ./scripts/package-extension.sh
 ```
 
-The ZIP is written to `artifacts/cpu-control@big-yellow-duck.github.io.shell-extension.zip`. It contains only the extension runtime files and the Apache 2.0 license. Install the system helper first with `./scripts/install.sh`; installing the ZIP alone does not install the privileged helper. Uploading to extensions.gnome.org requires a separate review; packaging does not establish approval or compatibility beyond GNOME 50.
+The ZIP is written to `artifacts/cpu-control@big-yellow-duck.github.io.shell-extension.zip`. It contains only the compiled JavaScript, runtime metadata and CSS and the Apache 2.0 license. Install the system helper first with `./scripts/install.sh`; installing the ZIP alone does not install the privileged helper. Uploading to extensions.gnome.org requires a separate review; packaging does not establish approval or compatibility beyond GNOME 50.
 
 The extension UUID uses the project owner's GitHub namespace. The D-Bus interface and policy filenames use `io.github.big_yellow_duck`; underscores replace the hyphens in the GitHub username because D-Bus interface names do not permit hyphens.
 
@@ -120,3 +122,16 @@ The optional `install-power-profiles.sh` and `uninstall-power-profiles.sh` scrip
 ## License
 
 CPU Control is licensed under the [Apache License 2.0](LICENSE) (`Apache-2.0`).
+
+## TypeScript development
+
+The extension source lives in `extension/extension.ts`, with its validated helper-state contract in `extension/cpuState.ts`. GNOME Shell 50 and GJS API typings come from `@girs`. Strict TypeScript checking covers UI fields, nullable state, D-Bus method names and request tuples, and asynchronous replies.
+
+```sh
+npm ci
+npm run check
+npm run build
+npm test
+```
+
+The build emits readable ES modules into `dist/` and copies metadata, CSS and the license there. Generated output and `node_modules/` are ignored by Git. Installation, packaging and live tests build from the TypeScript source; GNOME Shell runs the resulting JavaScript and does not need Node.js at runtime.

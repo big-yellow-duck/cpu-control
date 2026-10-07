@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 artifacts/
 *.zip
+
+node_modules/
+dist/
