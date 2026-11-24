@@ -84,21 +84,19 @@ export async function run() {
     assert(!Main.panel.statusArea[uuid], 'Top bar button leaked after disable');
 
     const call = extension._call;
-    let discoveries = 0;
+    const requests = [];
     extension._call = async function (method, ...args) {
-        if (method === 'Discover') {
-            discoveries++;
-            return state;
-        }
-        if (method === 'GetState' && discoveries === 0)
+        requests.push(method);
+        if (method === 'GetState' && requests.length === 1)
             return {...state, ready: false, choices: [], total_cores: 0, physical_cores: 0};
         return call.call(this, method, ...args);
     };
     try {
         Main.extensionManager.enableExtension(uuid);
-        await until(() => extension._enabled && extension._state?.ready && !extension._refreshing,
+        await until(() => requests.length >= 2 && extension._enabled && extension._state?.ready && !extension._refreshing,
             'Extension did not discover missing topology on enable');
-        assert(discoveries === 1, 'Extension must discover missing topology once');
+        assert(requests.every(method => method === 'GetState'),
+            'Startup topology discovery must use only GetState');
     } finally {
         extension._call = call;
     }

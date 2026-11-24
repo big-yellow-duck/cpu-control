@@ -13,6 +13,7 @@ spec.loader.exec_module(module)
 class FakeController(module.Controller):
     def __init__(self, root, cache=None):
         self.writes = []
+        self.smt_changes = []
         self.reject = set()
         super().__init__(root, cache)
 
@@ -31,6 +32,7 @@ class FakeController(module.Controller):
         old = self.smt_control()
         super().control(value)
         if old != value:
+            self.smt_changes.append(value)
             # Linux's global SMT knob changes the online mask too.
             online = self.online()
             if value == "on":
@@ -95,15 +97,30 @@ class TopologyTest(unittest.TestCase):
         c.configuration(2, False)
         self.assertLess(c.writes.index((2, True)), c.writes.index((1, False)))
 
-    def test_discovery_restores_mask_and_kernel_smt_control(self):
+    def test_discovery_caches_topology_without_cpu_or_smt_changes(self):
         c = self.controller
-        c.control("off")
-        c.apply_mask({0, 1})
+        c.cache = self.root / "cache.json"
         c.cores = []
-        c.discover()
-        self.assertEqual(c.online(), {0, 1})
-        self.assertEqual(c.smt_control(), "off")
-        self.assertEqual(c.state()["total_cores"], 4)
+        state = c.discover()
+        self.assertTrue(state["ready"])
+        self.assertEqual(state["total_cores"], 4)
+        self.assertTrue(c.cache.exists())
+        self.assertEqual(c.writes, [])
+        self.assertEqual(c.smt_changes, [])
+
+    def test_discovery_without_topology_leaves_offline_cpus_and_smt_unchanged(self):
+        for smt in ("on", "off", "forceoff"):
+            with self.subTest(smt=smt):
+                (self.root / "smt/control").write_text(smt)
+                (self.root / "online").write_text("0,1")
+                c = FakeController(self.root)
+                state = c.discover()
+                self.assertFalse(state["ready"])
+                self.assertIn("CPUs are offline", state["error"])
+                self.assertEqual(state["online_cpus"], [0, 1])
+                self.assertEqual(state["smt_control"], smt)
+                self.assertEqual(c.writes, [])
+                self.assertEqual(c.smt_changes, [])
 
     def test_restore_all_enables_global_smt(self):
         c = self.controller
@@ -137,9 +154,11 @@ class TopologyTest(unittest.TestCase):
         c = FakeController(self.root, cache)
         c.configuration(1, False)
         restarted = FakeController(self.root, cache)
-        self.assertTrue(restarted.state()["ready"])
-        self.assertEqual(restarted.state()["total_cores"], 4)
+        state = restarted.discover()
+        self.assertTrue(state["ready"])
+        self.assertEqual(state["total_cores"], 4)
         self.assertEqual(restarted.writes, [])
+        self.assertEqual(restarted.smt_changes, [])
 
     def test_discovery_refreshes_changed_present_cpu_set(self):
         (self.root / "present").write_text("0-6")

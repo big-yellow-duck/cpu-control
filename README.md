@@ -37,7 +37,7 @@ Installed files:
 | `/etc/polkit-1/rules.d/49-cpu-control.rules` | Allow only the installing user in an active local session |
 | `/run/cpu-control/topology.json` | Root-owned topology cache, removed on reboot |
 
-Installation discovers topology by temporarily enabling all CPUs and restoring the original online mask and kernel SMT control. It never persists a reduced core count. At boot, the service caches any complete topology it can read. When the extension loads at login, it automatically requests discovery if the helper reports missing topology. If the attempt fails, **Detect CPU topology…** and **All cores** are available in the menu.
+At boot and when the extension reads CPU state, the helper automatically uses its topology cache or tries to read complete topology from Linux. Discovery leaves CPU availability and SMT settings in place. If CPUs are offline and there is no valid cache, the menu shows that topology is unavailable and refreshes automatically. **All cores** is a separate, explicit action that enables SMT and brings CPUs online, allowing the helper to build the cache.
 
 Run the installer again to update all files. For extension-only updates, use `./scripts/install-extension.sh`; this updates your user files without changing the helper or CPU configuration. Log out and back in to load updated JavaScript in GNOME Shell. System files are copies owned by root; the service does not execute code from this working directory or your home directory. Remove it with:
 
@@ -63,10 +63,10 @@ The extension sends only typed D-Bus requests. It runs no `sudo`/`pkexec`, execu
 
 | Method | Arguments | Behavior |
 | --- | --- | --- |
-| `GetState` | none | Read current topology/online state as JSON; no authorization required |
+| `GetState` | none | Read current topology and online state as JSON, caching complete topology when available |
 | `SetConfiguration` | unsigned physical-core count, boolean SMT | Change only CPU availability |
 | `RestoreAll` | none | Enable every present CPU, including SMT siblings |
-| `Discover` | none | Probe complete topology and restore the starting CPU configuration |
+| `Discover` | none | Alias for `GetState` for older clients |
 
 All changing methods check `io.github.big_yellow_duck.cpu-control.configure` through polkit using the actual D-Bus sender's unique bus name. No caller-supplied paths, commands or executables are accepted. The local rule allows the installing user in an active local session; other active users require administrative authentication, and inactive/remote users are denied by default. The permission applies to applications in that user's session, not exclusively the extension.
 

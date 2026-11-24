@@ -14,7 +14,7 @@ import {parseCpuState, type CpuState} from './cpuState.js';
 
 type ChangeRequest =
     | [method: 'SetConfiguration', parameters: GLib.Variant<'(ub)'>]
-    | [method: 'RestoreAll' | 'Discover', parameters?: null];
+    | [method: 'RestoreAll', parameters?: null];
 type CpuRequest = ChangeRequest | [method: 'GetState', parameters?: null];
 
 const BUS = 'io.github.big_yellow_duck.CpuControl1';
@@ -34,7 +34,6 @@ export default class CpuControlExtension extends Extension {
     private declare _enabled: boolean;
     private declare _busy: boolean;
     private declare _refreshing: boolean;
-    private declare _autoDiscoverPending: boolean;
     private declare _updating: boolean;
     private declare _cancellable: Gio.Cancellable | null;
     private declare _button: PanelMenu.Button | null;
@@ -42,7 +41,7 @@ export default class CpuControlExtension extends Extension {
     private declare _label: St.Label;
     private declare _status: PopupMenu.PopupMenuItem;
     private declare _heading: PopupMenu.PopupMenuItem;
-    private declare _counts: Array<[number | null, PopupMenu.PopupBaseMenuItem]>;
+    private declare _counts: Array<[number, PopupMenu.PopupBaseMenuItem]>;
     private declare _all: PopupMenu.PopupBaseMenuItem;
     private declare _smt: InstanceType<typeof SmtSwitchMenuItem>;
     private declare _signal: number;
@@ -54,7 +53,6 @@ export default class CpuControlExtension extends Extension {
         this._enabled = true;
         this._busy = false;
         this._refreshing = false;
-        this._autoDiscoverPending = true;
         this._cancellable = new Gio.Cancellable();
         this._button = new PanelMenu.Button(0.0, 'CPU Control');
         // Button creates a real popup menu when dontCreateMenu is omitted.
@@ -122,11 +120,7 @@ export default class CpuControlExtension extends Extension {
         if (this._cancellable !== cancellable || this._busy)
             return;
 
-        const discover = this._autoDiscoverPending && !state.ready;
-        this._autoDiscoverPending = false;
         this._render(state);
-        if (discover)
-            await this._change('Discover');
     }
 
     private _render(state: CpuState): void {
@@ -148,9 +142,6 @@ export default class CpuControlExtension extends Extension {
                     this._menu.addMenuItem(item);
                     this._counts.push([count, item]);
                 }
-            } else {
-                const detect = this._menu.addAction('Detect CPU topology…', () => this._change('Discover'));
-                this._counts.push([null, detect]);
             }
             this._all = this._menu.addAction('All cores', () => this._change('RestoreAll'));
             this._menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
@@ -182,7 +173,7 @@ export default class CpuControlExtension extends Extension {
         this._smt.sensitive = !this._busy && state.ready && state.smt_supported && state.smt_available;
         this._status.label.text = this._busy ? 'Applying…' : state.error ||
             (state.ready ? `${state.online_cpus.length} threads online${state.smt_mixed ? ' · SMT mixed' : ''}`
-                : 'Detect topology to select cores');
+                : 'CPU topology unavailable');
     }
 
     private async _change(...request: ChangeRequest): Promise<void> {
@@ -192,8 +183,6 @@ export default class CpuControlExtension extends Extension {
         this._busy = true;
         if (this._state)
             this._render(this._state);
-        if (request[0] === 'Discover')
-            this._status.label.text = 'Detecting CPU topology…';
         let failure: unknown = null;
         try {
             const state = await this._call(...request);

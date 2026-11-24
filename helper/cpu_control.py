@@ -47,8 +47,7 @@ class Controller:
                 logging.exception("Ignoring invalid topology cache")
         if not self.cores:
             try:
-                self.cores = self.scan()
-                self.save()
+                self.load_topology()
             except (OSError, ValueError):
                 # Starting the service never changes CPU availability.
                 pass
@@ -82,13 +81,13 @@ class Controller:
         if seen != self.present():
             raise ValueError("Incomplete physical CPU topology; detect topology first")
 
-    def scan(self):
-        if self.online() != self.present():
-            raise ValueError("Offline CPU topology unavailable; detect topology first")
+    def scan(self, present):
+        if self.online() != present:
+            raise ValueError("Linux exposes incomplete topology while CPUs are offline")
         groups = {}
-        for cpu in sorted(self.present()):
+        for cpu in sorted(present):
             topo = self.root / f"cpu{cpu}" / "topology"
-            threads = tuple(sorted(cpu_list((topo / "thread_siblings_list").read_text()) & self.present()))
+            threads = tuple(sorted(cpu_list((topo / "thread_siblings_list").read_text()) & present))
             package = int((topo / "physical_package_id").read_text())
             core_id = int((topo / "core_id").read_text())
             if cpu not in threads or package < 0 or core_id < 0:
@@ -99,13 +98,21 @@ class Controller:
             groups[threads] = info
         cores = sorted(groups.values(), key=lambda c: (c["package"], c["core_id"], c["threads"][0]))
         self.validate(cores)
+        if self.present() != present or self.online() != present:
+            raise ValueError("CPU availability changed during topology discovery")
         return cores
 
-    def save(self):
+    def load_topology(self):
+        present = self.present()
+        cores = self.scan(present)
         if self.cache:
             temporary = self.cache.with_suffix(".tmp")
-            temporary.write_text(json.dumps({"present": sorted(self.present()), "cores": self.cores}))
+            temporary.write_text(json.dumps({"present": sorted(present), "cores": cores}))
             temporary.replace(self.cache)
+        self.cores = cores
+        self._present = present
+        self.pinned.intersection_update(present)
+        self.pinned.update(cpu for cpu in present if cpu == 0 or not self.path(cpu).exists())
 
     def write_cpu(self, cpu, enabled):
         if cpu not in self.present():
@@ -155,23 +162,11 @@ class Controller:
             raise RuntimeError(message) from exc
 
     def discover(self):
-        before, smt = self.online(), self.smt_control()
-        discovered = []
-
-        def probe():
-            nonlocal discovered
-            if smt == "off":
-                self.control("on")
-            self.apply_mask(self.present())
-            discovered = self.scan()
-            self.restore_snapshot(before, smt)
-
-        self.transaction(probe)
-        self.cores = discovered
-        self._present = self.present()
-        self.pinned.intersection_update(self._present)
-        self.pinned.update(cpu for cpu in self._present if cpu == 0 or not self.path(cpu).exists())
-        self.save()
+        if not self.cores or self.present() != self._present:
+            try:
+                self.load_topology()
+            except (OSError, ValueError) as exc:
+                return self.state(topology_error=f"CPU topology unavailable: {exc}")
         return self.state()
 
     def configuration(self, count, smt):
@@ -206,14 +201,10 @@ class Controller:
             self.apply_mask(self.present())
         self.transaction(apply)
         if not self.cores or self.present() != self._present:
-            self.cores = self.scan()
-            self._present = self.present()
-            self.pinned.intersection_update(self._present)
-            self.pinned.update(cpu for cpu in self._present if cpu == 0 or not self.path(cpu).exists())
-            self.save()
+            self.load_topology()
         return self.state()
 
-    def state(self):
+    def state(self, topology_error=""):
         present, online = self.present(), self.online()
         valid = bool(self.cores) and present == self._present
         active = [core for core in self.cores if online.intersection(core["threads"])] if valid else []
@@ -234,7 +225,7 @@ class Controller:
             "smt_available": self.smt_control() not in ("forceoff", "notsupported", "notimplemented"),
             "smt_control": self.smt_control(), "pinned_cpus": sorted(self.pinned),
             "choices": sorted(c for c in choices if required <= c < total),
-            "error": self.last_error,
+            "error": self.last_error or topology_error,
         }
 
 
@@ -252,7 +243,7 @@ def serve():
     last = ""
 
     def state_json():
-        return json.dumps(controller.state(), sort_keys=True)
+        return json.dumps(controller.discover(), sort_keys=True)
 
     def publish():
         nonlocal last
@@ -270,13 +261,13 @@ def serve():
 
     def handle(conn, sender, path, iface, method, parameters, invocation):
         nonlocal busy
-        if method == "GetState":
+        if method in ("GetState", "Discover"):
             try:
                 invocation.return_value(GLib.Variant("(s)", (state_json(),)))
             except Exception as exc:
                 error(invocation, "Unavailable", str(exc))
             return
-        if method not in ("Discover", "SetConfiguration", "RestoreAll"):
+        if method not in ("SetConfiguration", "RestoreAll"):
             error(invocation, "Invalid", "Unknown operation")
             return
         if busy:
@@ -296,10 +287,8 @@ def serve():
                     return
                 if method == "SetConfiguration":
                     state = controller.configuration(*args)
-                elif method == "RestoreAll":
-                    state = controller.restore_all()
                 else:
-                    state = controller.discover()
+                    state = controller.restore_all()
                 invocation.return_value(GLib.Variant("(s)", (json.dumps(state),)))
             except Exception as exc:
                 logging.exception("CPU operation failed")

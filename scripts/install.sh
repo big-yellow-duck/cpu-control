@@ -15,6 +15,6 @@ npm --prefix "$project" run build # fail before installing privileged files
 /usr/bin/python3 -c 'from gi.repository import Gio, GLib' # verify the system Python has PyGObject
 echo 'System installation: root-owned /etc/cpu-control helper, systemd unit,'
 echo '/etc/dbus-1/system.d policy, /etc/polkit-1 action and local-user rule.'
-echo 'Topology discovery briefly enables all CPUs, then restores their starting state.'
+echo 'Topology discovery leaves CPU and SMT settings in place.'
 pkexec /usr/bin/bash "$project/scripts/install-system.sh" "$project" "$(id -un)"
 "$project/scripts/install-extension.sh"

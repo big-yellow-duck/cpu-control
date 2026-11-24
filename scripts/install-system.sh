@@ -29,6 +29,4 @@ fi
 pkaction --action-id io.github.big_yellow_duck.cpu-control.configure >/dev/null
 systemctl enable cpu-control.service
 systemctl restart cpu-control.service
-# Explicit installation-time discovery; the service itself never probes by hotplug at boot.
-busctl --timeout=75 call io.github.big_yellow_duck.CpuControl1 /io/github/big_yellow_duck/CpuControl1 io.github.big_yellow_duck.CpuControl1 Discover
 systemctl --no-pager --full status cpu-control.service
