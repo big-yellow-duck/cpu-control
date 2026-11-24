@@ -37,7 +37,7 @@ Installed files:
 | `/etc/polkit-1/rules.d/49-cpu-control.rules` | Allow only the installing user in an active local session |
 | `/run/cpu-control/topology.json` | Root-owned topology cache, removed on reboot |
 
-Installation deliberately discovers topology by temporarily enabling all CPUs and restoring the original online mask and kernel SMT control. It never persists a reduced core count. The enabled service starts at boot but only **reads** CPU state until a configuration request arrives. If complete topology is available at startup, it caches it without hotplug. If CPUs were already offlined and topology is missing, the menu offers **Detect CPU topology…** or **All cores**.
+Installation discovers topology by temporarily enabling all CPUs and restoring the original online mask and kernel SMT control. It never persists a reduced core count. At boot, the service caches any complete topology it can read. When the extension loads at login, it automatically requests discovery if the helper reports missing topology. If the attempt fails, **Detect CPU topology…** and **All cores** are available in the menu.
 
 Run the installer again to update all files. For extension-only updates, use `./scripts/install-extension.sh`; this updates your user files without changing the helper or CPU configuration. Log out and back in to load updated JavaScript in GNOME Shell. System files are copies owned by root; the service does not execute code from this working directory or your home directory. Remove it with:
 

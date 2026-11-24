@@ -82,8 +82,26 @@ export async function run() {
     Main.extensionManager.disableExtension(uuid);
     await until(() => !extension._enabled, 'Extension did not disable');
     assert(!Main.panel.statusArea[uuid], 'Top bar button leaked after disable');
-    Main.extensionManager.enableExtension(uuid);
-    await until(() => extension._enabled && extension._state?.ready, 'Extension did not re-enable');
+
+    const call = extension._call;
+    let discoveries = 0;
+    extension._call = async function (method, ...args) {
+        if (method === 'Discover') {
+            discoveries++;
+            return state;
+        }
+        if (method === 'GetState' && discoveries === 0)
+            return {...state, ready: false, choices: [], total_cores: 0, physical_cores: 0};
+        return call.call(this, method, ...args);
+    };
+    try {
+        Main.extensionManager.enableExtension(uuid);
+        await until(() => extension._enabled && extension._state?.ready && !extension._refreshing,
+            'Extension did not discover missing topology on enable');
+        assert(discoveries === 1, 'Extension must discover missing topology once');
+    } finally {
+        extension._call = call;
+    }
     assert(extension._all.sensitive, 'Menu did not recover on re-enable');
-    print('PASS: GNOME 50 radio selection, SMT toggle, All cores, error recovery and disable/re-enable');
+    print('PASS: Radio selection, SMT toggle, All cores, error recovery and startup discovery');
 }

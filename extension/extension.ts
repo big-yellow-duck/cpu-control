@@ -34,6 +34,7 @@ export default class CpuControlExtension extends Extension {
     private declare _enabled: boolean;
     private declare _busy: boolean;
     private declare _refreshing: boolean;
+    private declare _autoDiscoverPending: boolean;
     private declare _updating: boolean;
     private declare _cancellable: Gio.Cancellable | null;
     private declare _button: PanelMenu.Button | null;
@@ -53,6 +54,7 @@ export default class CpuControlExtension extends Extension {
         this._enabled = true;
         this._busy = false;
         this._refreshing = false;
+        this._autoDiscoverPending = true;
         this._cancellable = new Gio.Cancellable();
         this._button = new PanelMenu.Button(0.0, 'CPU Control');
         // Button creates a real popup menu when dontCreateMenu is omitted.
@@ -104,17 +106,27 @@ export default class CpuControlExtension extends Extension {
     private async _refresh(): Promise<void> {
         if (!this._enabled || this._busy || this._refreshing)
             return;
+        const cancellable = this._cancellable;
         this._refreshing = true;
+        let state: CpuState;
         try {
-            const state = await this._call('GetState');
-            if (this._enabled && !this._busy)
-                this._render(state);
+            state = await this._call('GetState');
         } catch (error) {
-            if (this._enabled && !this._busy)
+            if (this._cancellable === cancellable && !this._busy)
                 this._showError(error);
+            return;
         } finally {
-            this._refreshing = false;
+            if (this._cancellable === cancellable)
+                this._refreshing = false;
         }
+        if (this._cancellable !== cancellable || this._busy)
+            return;
+
+        const discover = this._autoDiscoverPending && !state.ready;
+        this._autoDiscoverPending = false;
+        this._render(state);
+        if (discover)
+            await this._change('Discover');
     }
 
     private _render(state: CpuState): void {
@@ -176,23 +188,26 @@ export default class CpuControlExtension extends Extension {
     private async _change(...request: ChangeRequest): Promise<void> {
         if (this._busy || !this._enabled)
             return;
+        const cancellable = this._cancellable;
         this._busy = true;
         if (this._state)
             this._render(this._state);
+        if (request[0] === 'Discover')
+            this._status.label.text = 'Detecting CPU topology…';
         let failure: unknown = null;
         try {
             const state = await this._call(...request);
-            if (this._enabled)
+            if (this._cancellable === cancellable)
                 this._state = state;
         } catch (error) {
             failure = error;
         } finally {
-            this._busy = false;
-            if (this._enabled) {
+            if (this._cancellable === cancellable) {
+                this._busy = false;
                 if (this._state)
                     this._render(this._state);
                 await this._refresh();
-                if (failure)
+                if (failure && this._cancellable === cancellable)
                     this._showError(failure, true);
             }
         }
