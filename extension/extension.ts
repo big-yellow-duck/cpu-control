@@ -37,13 +37,14 @@ export default class CpuControlExtension extends Extension {
     private declare _updating: boolean;
     private declare _cancellable: Gio.Cancellable | null;
     private declare _button: PanelMenu.Button | null;
-    private declare _menu: PopupMenu.PopupMenu;
-    private declare _label: St.Label;
-    private declare _status: PopupMenu.PopupMenuItem;
-    private declare _heading: PopupMenu.PopupMenuItem;
+    private declare _menu: PopupMenu.PopupMenu | null;
+    private declare _label: St.Label | null;
+    private declare _status: PopupMenu.PopupMenuItem | null;
+    private declare _heading: PopupMenu.PopupMenuItem | null;
     private declare _counts: Array<[number, PopupMenu.PopupBaseMenuItem]>;
-    private declare _all: PopupMenu.PopupBaseMenuItem;
-    private declare _smt: InstanceType<typeof SmtSwitchMenuItem>;
+    private declare _all: PopupMenu.PopupBaseMenuItem | null;
+    private declare _smt: InstanceType<typeof SmtSwitchMenuItem> | null;
+    private declare _menuOpenSignal: number;
     private declare _signal: number;
     private declare _poll: number;
     private declare _state: CpuState | null;
@@ -64,7 +65,7 @@ export default class CpuControlExtension extends Extension {
         Main.panel.addToStatusArea(this.uuid, this._button);
         this._status = new PopupMenu.PopupMenuItem('Connecting…', {reactive: false});
         this._menu.addMenuItem(this._status);
-        this._menu.connect('open-state-changed', (_menu: PopupMenu.PopupMenu, open: boolean) => {
+        this._menuOpenSignal = this._menu.connect('open-state-changed', (_menu: PopupMenu.PopupMenu, open: boolean) => {
             if (open)
                 this._refresh();
         });
@@ -124,7 +125,7 @@ export default class CpuControlExtension extends Extension {
     }
 
     private _render(state: CpuState): void {
-        if (!this._enabled)
+        if (!this._enabled || !this._menu || !this._label)
             return;
         this._state = state;
         const topology = JSON.stringify([state.ready, state.choices, state.total_cores, state.smt_supported]);
@@ -155,6 +156,8 @@ export default class CpuControlExtension extends Extension {
             this._status.add_style_class_name('cpu-control-status');
             this._menu.addMenuItem(this._status);
         }
+        if (!this._heading || !this._all || !this._smt || !this._status)
+            return;
         this._label.text = state.ready ? `CPU ${state.physical_cores}` : 'CPU';
         this._heading.label.text = state.ready ? `CPU Cores · ${state.physical_cores} / ${state.total_cores}` : 'CPU Cores';
         for (const [count, item] of this._counts) {
@@ -203,7 +206,7 @@ export default class CpuControlExtension extends Extension {
     }
 
     private _showError(error: unknown, notify = false): void {
-        if (!this._enabled)
+        if (!this._enabled || !this._status)
             return;
         const message = (error instanceof Error ? error.message : String(error)).replace(/^GDBus\.Error:[^:]+:\s*/, '');
         this._status.label.text = `CPU Control: ${message}`;
@@ -218,9 +221,23 @@ export default class CpuControlExtension extends Extension {
             GLib.Source.remove(this._poll);
         if (this._signal)
             Gio.DBus.system.signal_unsubscribe(this._signal);
+        if (this._menuOpenSignal)
+            this._menu?.disconnect(this._menuOpenSignal);
+        this._heading?.destroy();
+        this._status?.destroy();
+        this._label?.destroy();
+        // The button owns the menu and destroys its remaining items.
         this._button?.destroy();
         this._button = null;
+        this._menu = null;
+        this._label = null;
+        this._status = null;
+        this._heading = null;
+        this._counts = [];
+        this._all = null;
+        this._smt = null;
         this._cancellable = null;
+        this._menuOpenSignal = 0;
         this._poll = 0;
         this._signal = 0;
         this._state = null;
